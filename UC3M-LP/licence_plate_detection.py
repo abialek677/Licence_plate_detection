@@ -22,7 +22,7 @@ image_folder = "C:/Users/adamb/Desktop/Data/UC3M-LP-yolo/LP/images/val"
 
 # List image files in the folder
 image_files = [f for f in os.listdir(image_folder) if os.path.isfile(join(image_folder, f))]
-image_file = "00014.jpg"
+image_file = "00353.jpg"
 vehicles = [2, 3, 5, 7]
 
 frame = cv2.imread(join(image_folder, image_file))
@@ -76,7 +76,7 @@ if detections_:
                                                                     'bbox_score': score,
                                                                     'text_score': license_plate_text_score}}
             # Draw rectangle around license plate
-            cv2.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            cv2.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 1)
 
 # Convert BGR to RGB
 frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)

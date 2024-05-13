@@ -93,16 +93,16 @@ def format_license(text):
     Returns:
         str: Formatted license plate text.
     """
-    license_plate_ = ''
-    mapping = {0: dict_int_to_char, 1: dict_int_to_char, 4: dict_int_to_char, 5: dict_int_to_char, 6: dict_int_to_char,
-               2: dict_char_to_int, 3: dict_char_to_int}
-    for j in [0, 1, 2, 3, 4, 5, 6]:
-        if text[j] in mapping[j].keys():
-            license_plate_ += mapping[j][text[j]]
-        else:
-            license_plate_ += text[j]
+    #license_plate_ = ''
+    #mapping = {0: dict_int_to_char, 1: dict_int_to_char, 4: dict_int_to_char, 5: dict_int_to_char, 6: dict_int_to_char,
+    #           2: dict_char_to_int, 3: dict_char_to_int}
+    #for j in [0, 1, 2, 3, 4, 5, 6]:
+    #    if text[j] in mapping[j].keys():
+    #        license_plate_ += mapping[j][text[j]]
+    #    else:
+    #        license_plate_ += text[j]
 
-    return license_plate_
+    #return license_plate_
 
 
 def read_license_plate(license_plate_crop):
