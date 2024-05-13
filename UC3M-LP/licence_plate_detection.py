@@ -12,13 +12,13 @@ FRAME_WIDTH = 608
 results = []
 
 # Load models
-license_plate_detector = YOLO('best.pt')
+license_plate_detector = YOLO('best100.pt')
 
 # Folder containing images (adjust here)
 image_folder = "C:/Users/adamb/Desktop/Data/UC3M-LP-yolo/LP/images/val"
 
 # input file
-image_file = "00014.jpg"
+image_file = "00000.jpg"
 
 frame = cv2.imread(join(image_folder, image_file))
 original_h, original_w = frame.shape[:2]
@@ -29,11 +29,10 @@ search_frame = [[0, 0, frame_resized.shape[1], frame_resized.shape[0], 1.0]]
 
 # Detect license plates
 license_plates = license_plate_detector(frame_resized)[0]
-print("Licence plates: ", license_plates.boxes.data.tolist())
 
 
 for license_plate in license_plates.boxes.data.tolist():
-    x1, y1, x2, y2, score, class_id = license_plate
+    x1, y1, x2, y2, score, _ = license_plate
     # Crop license plate
     license_plate_crop = frame_resized[int(y1):int(y2), int(x1): int(x2), :]
 
