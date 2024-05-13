@@ -40,6 +40,10 @@ for detection in detections.boxes.data.tolist():
 
 print("Detections: ", detections_)
 
+if not detections_:
+    # If no cars are detected, assume the entire image is a single car
+    detections_ = [[0, 0, frame_resized.shape[1], frame_resized.shape[0], 1.0]]
+
 # Check if there are detections before tracking
 if detections_:
     # Track vehicles
