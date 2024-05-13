@@ -9,6 +9,10 @@ import util
 from sort.sort import Sort
 from util import get_car, read_license_plate, write_csv
 
+# consts
+FRAME_HEIGHT = 456
+FRAME_WIDTH = 608
+
 results = {}
 
 mot_tracker = Sort()
@@ -22,26 +26,28 @@ image_folder = "C:/Users/adamb/Desktop/Data/UC3M-LP-yolo/LP/images/val"
 
 # List image files in the folder
 image_files = [f for f in os.listdir(image_folder) if os.path.isfile(join(image_folder, f))]
-image_file = "madzia.jpg"
+image_file = "00617.jpg"
 vehicles = [2, 3, 5, 7]
 
 frame = cv2.imread(join(image_folder, image_file))
-frame_resized = cv2.resize(frame, (608, 456))  # Resize to 608x456
+frame_resized = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))  # Resize to 608x456
+original_h, original_w = frame.shape[:2]
 
 results[0] = {}
 
 # Detect vehicles
 detections = coco_model(frame_resized)[0]
 detections_ = []
-for detection in detections.boxes.data.tolist():
-    x1, y1, x2, y2, score, class_id = detection
-    if int(class_id) in vehicles:
-        detections_.append([x1, y1, x2, y2, score])
+
+# Keep the original commented code intact
+# for detection in detections.boxes.data.tolist():
+#     x1, y1, x2, y2, score, class_id = detection
+#     if int(class_id) in vehicles:
+#         detections_.append([x1, y1, x2, y2, score])
 
 print("Detections: ", detections_)
 
 if not detections_:
-    # If no cars are detected, assume the entire image is a single car
     detections_ = [[0, 0, frame_resized.shape[1], frame_resized.shape[0], 1.0]]
 
 # Check if there are detections before tracking
@@ -71,18 +77,18 @@ if detections_:
             print(license_plate_text)
             if license_plate_text is not None:
                 results[0][car_id] = {'car': {'bbox': [xcar1, ycar1, xcar2, ycar2]},
-                                                  'license_plate': {'bbox': [x1, y1, x2, y2],
+                                                  'license_plate': {'bbox': [x1*original_w/FRAME_WIDTH, y1*original_h/FRAME_HEIGHT, x2*original_w/FRAME_WIDTH, y2*original_h/FRAME_HEIGHT],
                                                                     'text': license_plate_text,
                                                                     'bbox_score': score,
                                                                     'text_score': license_plate_text_score}}
             # Draw rectangle around license plate
-            cv2.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            cv2.rectangle(frame, (int(x1*original_w/608), int(y1*original_h/456)), (int(x2*original_w/608), int(y2*original_h/456)), (0, 255, 0), 2)
 
 # Convert BGR to RGB
 frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
 
 # Show the image with rectangles drawn around license plates
-plt.imshow(frame_rgb)
+plt.imshow(frame)
 plt.axis('off')  # Turn off axis labels
 plt.show()
 
