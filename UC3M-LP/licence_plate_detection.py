@@ -13,15 +13,14 @@ results = []
 
 # Load models
 licence_plate_detector = YOLO('best100.pt')
-licence_plate_recognition = YOLO('best_letters.pt')
-#licence_plate_recognition = YOLO('best_letters_312.pt')
+licence_plate_recognition = YOLO('best_letters_312.pt')
 
 # Folder containing images (adjust here)
 #image_folder = "C:/Users/adamb/Desktop/Data/UC3M-LP-yolo/LP/images/val"
 image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val"
 
 # input file
-image_file = "00000.jpg"
+image_file = "iwsonek2.png"
 
 frame = cv2.imread(join(image_folder, image_file))
 original_h, original_w = frame.shape[:2]
@@ -51,7 +50,8 @@ for licence_plate in licence_plates.boxes.data.tolist():
 
     for detection in sorted_detections:
         x1_d, y1_d, x2_d, y2_d, score_d, class_id = detection
-        licence_plate_text += licence_plate_recognition.names[class_id]
+        if score_d > 0.7:
+            licence_plate_text += licence_plate_recognition.names[class_id]
 
         # Append results with necessary fields
         #results.append({'licence_plate': {'bbox': [x1*original_w/FRAME_WIDTH, y1*original_h/FRAME_HEIGHT,
