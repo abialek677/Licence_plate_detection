@@ -15,7 +15,7 @@ licence_plate_detector = YOLO('best100.pt')
 licence_plate_recognition = YOLO('best_letters_312.pt')
 
 # Folder containing images
-image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val"
+image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val/mycars"
 
 # Create 'detected' subfolder if it doesn't exist
 if not exists(DETECTED_FOLDER):
