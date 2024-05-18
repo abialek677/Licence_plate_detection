@@ -163,3 +163,26 @@ def get_car(licence_plate, vehicle_track_ids):
         return vehicle_track_ids[car_indx]
 
     return -1, -1, -1, -1, -1
+
+
+
+def find_overlapping_bboxes(bboxes, threshold=0.9):
+    """Funkcja znajdująca zestawy bounding boxów, których obszary pokrywają się w minimum 80%."""
+    overlapping_bboxes = []
+
+    for i, bbox1 in enumerate(bboxes):
+        for j, bbox2 in enumerate(bboxes[i+1:], start=i+1):
+            cover = isCovered(bbox1, bbox2)
+            if cover :
+                overlapping_bboxes.append((bbox1, bbox2))
+
+    return overlapping_bboxes
+
+
+def isCovered(bbox1, bbox2):
+    x1_1, y1_1, x1_2, y1_2, _, _ = bbox1
+    x2_1, y2_1, x2_2, y2_2, _, _ = bbox2
+
+    if (abs(x1_1 - x2_1) <= ((x1_2 - x1_1) / 2)) and (abs(y1_1 - y2_1) <= ((y1_2 - y1_1) / 2)):
+        return True
+    return False
