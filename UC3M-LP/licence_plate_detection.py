@@ -3,21 +3,19 @@ from os.path import join, exists
 import cv2
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
-from util import read_licence_plate, write_csv
+from util import read_licence_plate, write_csv, find_overlapping_bboxes
 
 # Constants
 FRAME_HEIGHT = 456
 FRAME_WIDTH = 608
-DETECTED_FOLDER = "detected"
-#DETECTED_FOLDER = "detected_val"
+DETECTED_FOLDER = "detected_val"
 
 # Load models
 licence_plate_detector = YOLO('best100.pt')
 licence_plate_recognition = YOLO('best_letters_312.pt')
 
 # Folder containing images
-image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val/mycars"
-#image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val"
+image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val"
 
 # Create 'detected' subfolder if it doesn't exist
 if not exists(DETECTED_FOLDER):
@@ -46,13 +44,41 @@ for image_file in listdir(image_folder):
             # Read licence plate number
             licence_plate_detections = licence_plate_recognition(licence_plate_crop)[0]
 
-            # Sorting letter/numbers in order from left to right
-            sorted_detections = sorted(licence_plate_detections.boxes.data.tolist(), key=lambda x: x[0])
+            # Convert detections to list of bounding boxes with scores
+            bboxes = licence_plate_detections.boxes.data.tolist()
+
+            overlapping_bboxes = find_overlapping_bboxes(bboxes)
+            # Group overlapping bounding boxes
+            grouped_bboxes = []
+            while overlapping_bboxes:
+                bbox1, bbox2 = overlapping_bboxes.pop(0)
+                group = [bbox1, bbox2]
+                i = 0
+                while i < len(overlapping_bboxes):
+                    bbox1, bbox2 = overlapping_bboxes[i]
+                    if any(bbox in group for bbox in (bbox1, bbox2)):
+                        group.extend([bbox1, bbox2])
+                        overlapping_bboxes.pop(i)
+                    else:
+                        i += 1
+                grouped_bboxes.append(group)
+
+            # Choose the best bounding box from each group
+            chosen_detections = []
+            for group in grouped_bboxes:
+                best_bbox = max(group, key=lambda x: x[4])  # Choose bbox with highest score
+                chosen_detections.append(best_bbox)
+
+            # Add non-overlapping bounding boxes to chosen detections
+            for bbox in bboxes:
+                if bbox not in sum(grouped_bboxes, []):  # Check if bbox is not in any group
+                    chosen_detections.append(bbox)
+
+            sorted_detections = sorted(chosen_detections, key=lambda x: x[0])
 
             for detection in sorted_detections:
                 x1_d, y1_d, x2_d, y2_d, score_d, class_id = detection
-                if score_d > 0.5:
-                    licence_plate_text += licence_plate_recognition.names[class_id]
+                licence_plate_text += licence_plate_recognition.names[class_id]
 
             # Draw rectangle around licence plate
             cv2.rectangle(frame, (int(x1*original_w/FRAME_WIDTH), int(y1*original_h/FRAME_HEIGHT)),
