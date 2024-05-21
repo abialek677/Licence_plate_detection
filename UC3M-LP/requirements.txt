@@ -1,2 +1,4 @@
 opencv-python
 shapely
+ultralytics
+Levenshtein

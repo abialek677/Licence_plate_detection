@@ -1,9 +1,9 @@
-from os import listdir, makedirs
+from os import listdir, makedirs, path
 from os.path import join, exists
 import cv2
 from ultralytics import YOLO
-import matplotlib.pyplot as plt
-from util import read_licence_plate, write_csv, find_overlapping_bboxes
+from util import find_overlapping_bboxes
+import Levenshtein as lev
 
 # Constants
 FRAME_HEIGHT = 456
@@ -14,8 +14,15 @@ DETECTED_FOLDER = "detected_val"
 licence_plate_detector = YOLO('best100.pt')
 licence_plate_recognition = YOLO('best_letters_312.pt')
 
+# checking the work of the ocr model
+evaluateFlag = True
+
+
 # Folder containing images
-image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val/mycars"
+if evaluateFlag:
+    image_folder = "./evaluate/cars_test"
+else:
+    image_folder = "./cars"
 
 # Create 'detected' subfolder if it doesn't exist
 if not exists(DETECTED_FOLDER):
@@ -80,16 +87,53 @@ for image_file in listdir(image_folder):
                 x1_d, y1_d, x2_d, y2_d, score_d, class_id = detection
                 licence_plate_text += licence_plate_recognition.names[class_id]
 
-            # Draw rectangle around licence plate
-            cv2.rectangle(frame, (int(x1*original_w/FRAME_WIDTH), int(y1*original_h/FRAME_HEIGHT)),
-                          (int(x2*original_w/FRAME_WIDTH), int(y2*original_h/FRAME_HEIGHT)), (0, 255, 0), 2)
+            if evaluateFlag:
+                filename, ext = path.splitext(image_file)
+                o_path = f"./evaluate/model_output/{filename}.txt"
+                with open(o_path, 'w') as f:
+                    f.write(licence_plate_text)
 
-            # Put a text above the licence plate
-            cv2.putText(frame, str(licence_plate_text),
-                        (int(x1 * original_w / FRAME_WIDTH), int(y1 * original_h / FRAME_HEIGHT) - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+            x1_scaled = int(x1 * original_w / FRAME_WIDTH)
+            y1_scaled = int(y1 * original_h / FRAME_HEIGHT)
+            x2_scaled = int(x2 * original_w / FRAME_WIDTH)
+            y2_scaled = int(y2 * original_h / FRAME_HEIGHT)
+
+            # draw outline
+            cv2.rectangle(frame, (x1_scaled, y1_scaled), (x2_scaled, y2_scaled), (0, 0, 255), 2)
+
+            # Put the text above the licence plate with white background and black outline
+            (text_width, text_height), baseline = cv2.getTextSize(licence_plate_text, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)
+            cv2.rectangle(frame, (x1_scaled, y1_scaled - text_height - 10),
+                          (x1_scaled + text_width, y1_scaled), (255, 255, 255), -1)
+            cv2.putText(frame, str(licence_plate_text), (x1_scaled, y1_scaled - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
 
         # Save the processed image with detected licence plates
-        cv2.imwrite(join(DETECTED_FOLDER, image_file), frame)
+        if not evaluateFlag:
+            cv2.imwrite(join(DETECTED_FOLDER, image_file), frame)
 
 print("Processing complete.")
+
+if evaluateFlag:
+    output_path = "./evaluate/model_output"
+    tagged_data_path = "./evaluate/test_eval"
+
+    output_files = [path.join(output_path, file) for file in listdir(output_path)]
+    tagged_data_files = [path.join(tagged_data_path, file) for file in listdir(tagged_data_path)]
+    model_evaluation = 0
+    for output_file, tagged_data_file in zip(output_files, tagged_data_files):
+        # Load text from files
+        with open(output_file, 'r') as f:
+            output_text = f.read()
+        with open(tagged_data_file, 'r') as f:
+            tagged_data_text = f.read()
+
+        distance = lev.distance(output_text, tagged_data_text)
+
+        normalized_distance = max(distance / len(tagged_data_text), 0)
+        model_evaluation += normalized_distance
+
+    model_evaluation /= len(output_files)
+    model_evaluation = 1 - model_evaluation
+    print(f"\n\nModel evaluation: {model_evaluation}")
