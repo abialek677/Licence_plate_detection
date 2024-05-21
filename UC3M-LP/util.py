@@ -30,15 +30,15 @@ def write_csv(results, output_path):
     """
     with open(output_path, 'w') as f:
         f.write('{},{},{},{},{},{},{}\n'.format('frame_nmr', 'car_id', 'car_bbox',
-                                                'license_plate_bbox', 'license_plate_bbox_score', 'license_number',
-                                                'license_number_score'))
+                                                'licence_plate_bbox', 'licence_plate_bbox_score', 'licence_number',
+                                                'licence_number_score'))
 
         for frame_nmr in results.keys():
             for car_id in results[frame_nmr].keys():
                 print(results[frame_nmr][car_id])
                 if 'car' in results[frame_nmr][car_id].keys() and \
-                   'license_plate' in results[frame_nmr][car_id].keys() and \
-                   'text' in results[frame_nmr][car_id]['license_plate'].keys():
+                   'licence_plate' in results[frame_nmr][car_id].keys() and \
+                   'text' in results[frame_nmr][car_id]['licence_plate'].keys():
                     f.write('{},{},{},{},{},{},{}\n'.format(frame_nmr,
                                                             car_id,
                                                             '[{} {} {} {}]'.format(
@@ -47,26 +47,26 @@ def write_csv(results, output_path):
                                                                 results[frame_nmr][car_id]['car']['bbox'][2],
                                                                 results[frame_nmr][car_id]['car']['bbox'][3]),
                                                             '[{} {} {} {}]'.format(
-                                                                results[frame_nmr][car_id]['license_plate']['bbox'][0],
-                                                                results[frame_nmr][car_id]['license_plate']['bbox'][1],
-                                                                results[frame_nmr][car_id]['license_plate']['bbox'][2],
-                                                                results[frame_nmr][car_id]['license_plate']['bbox'][3]),
-                                                            results[frame_nmr][car_id]['license_plate']['bbox_score'],
-                                                            results[frame_nmr][car_id]['license_plate']['text'],
-                                                            results[frame_nmr][car_id]['license_plate']['text_score'])
+                                                                results[frame_nmr][car_id]['licence_plate']['bbox'][0],
+                                                                results[frame_nmr][car_id]['licence_plate']['bbox'][1],
+                                                                results[frame_nmr][car_id]['licence_plate']['bbox'][2],
+                                                                results[frame_nmr][car_id]['licence_plate']['bbox'][3]),
+                                                            results[frame_nmr][car_id]['licence_plate']['bbox_score'],
+                                                            results[frame_nmr][car_id]['licence_plate']['text'],
+                                                            results[frame_nmr][car_id]['licence_plate']['text_score'])
                             )
         f.close()
 
 
-def license_complies_format(text):
+def licence_complies_format(text):
     """
-    Check if the license plate text complies with the required format.
+    Check if the licence plate text complies with the required format.
 
     Args:
-        text (str): License plate text.
+        text (str): licence plate text.
 
     Returns:
-        bool: True if the license plate complies with the format, False otherwise.
+        bool: True if the licence plate complies with the format, False otherwise.
     """
     if len(text) != 7:
         return False
@@ -83,67 +83,72 @@ def license_complies_format(text):
         return False
 
 
-def format_license(text):
+def format_licence(text):
     """
-    Format the license plate text by converting characters using the mapping dictionaries.
+    Format the licence plate text by converting characters using the mapping dictionaries.
 
     Args:
-        text (str): License plate text.
+        text (str): licence plate text.
 
     Returns:
-        str: Formatted license plate text.
+        str: Formatted licence plate text.
     """
-    #license_plate_ = ''
+    #licence_plate_ = ''
     #mapping = {0: dict_int_to_char, 1: dict_int_to_char, 4: dict_int_to_char, 5: dict_int_to_char, 6: dict_int_to_char,
     #           2: dict_char_to_int, 3: dict_char_to_int}
     #for j in [0, 1, 2, 3, 4, 5, 6]:
     #    if text[j] in mapping[j].keys():
-    #        license_plate_ += mapping[j][text[j]]
+    #        licence_plate_ += mapping[j][text[j]]
     #    else:
-    #        license_plate_ += text[j]
+    #        licence_plate_ += text[j]
 
-    #return license_plate_
+    #return licence_plate_
 
 
-def read_license_plate(license_plate_crop):
+def read_licence_plate(licence_plate_crop):
     """
-    Read the license plate text from the given cropped image.
+    Read the licence plate text from the given cropped image.
 
     Args:
-        license_plate_crop (PIL.Image.Image): Cropped image containing the license plate.
+        licence_plate_crop (PIL.Image.Image): Cropped image containing the licence plate.
 
     Returns:
-        tuple: Tuple containing the formatted license plate text and its confidence score.
+        tuple: Tuple containing the formatted licence plate text and its confidence score.
     """
 
-    detections = reader.readtext(license_plate_crop)
+    detections = reader.readtext(licence_plate_crop)
     print(detections)
-    for detection in detections:
+    sorted_detections = sorted(detections, key=lambda x: x[0][0], reverse=False)
+    print(sorted_detections)
+    merged_text = ""
+    score = 0
+    for detection in sorted_detections:
         bbox, text, score = detection
 
-        text = text.upper().replace(' ', '')
+        # text = text.upper().replace(' ', '')
+        print("text:", text)
+        merged_text = merged_text + text
+        # if licence_complies_format(text):
+        #    return format_licence(text), score
+        # new_text = format_licence(text)
+        print("merged:", merged_text)
+    return merged_text, score
 
-        #if license_complies_format(text):
-        #    return format_license(text), score
-        new_text = format_license(text)
-        print(new_text)
-        return new_text, score
-
-    return None, None
+    # return None, None
 
 
-def get_car(license_plate, vehicle_track_ids):
+def get_car(licence_plate, vehicle_track_ids):
     """
-    Retrieve the vehicle coordinates and ID based on the license plate coordinates.
+    Retrieve the vehicle coordinates and ID based on the licence plate coordinates.
 
     Args:
-        license_plate (tuple): Tuple containing the coordinates of the license plate (x1, y1, x2, y2, score, class_id).
+        licence_plate (tuple): Tuple containing the coordinates of the licence plate (x1, y1, x2, y2, score, class_id).
         vehicle_track_ids (list): List of vehicle track IDs and their corresponding coordinates.
 
     Returns:
         tuple: Tuple containing the vehicle coordinates (x1, y1, x2, y2) and ID.
     """
-    x1, y1, x2, y2, score, class_id = license_plate
+    x1, y1, x2, y2, score, class_id = licence_plate
 
     foundIt = False
     for j in range(len(vehicle_track_ids)):
@@ -158,3 +163,26 @@ def get_car(license_plate, vehicle_track_ids):
         return vehicle_track_ids[car_indx]
 
     return -1, -1, -1, -1, -1
+
+
+
+def find_overlapping_bboxes(bboxes, threshold=0.9):
+    """Funkcja znajdująca zestawy bounding boxów, których obszary pokrywają się w minimum 80%."""
+    overlapping_bboxes = []
+
+    for i, bbox1 in enumerate(bboxes):
+        for j, bbox2 in enumerate(bboxes[i+1:], start=i+1):
+            cover = isCovered(bbox1, bbox2)
+            if cover :
+                overlapping_bboxes.append((bbox1, bbox2))
+
+    return overlapping_bboxes
+
+
+def isCovered(bbox1, bbox2):
+    x1_1, y1_1, x1_2, y1_2, _, _ = bbox1
+    x2_1, y2_1, x2_2, y2_2, _, _ = bbox2
+
+    if (abs(x1_1 - x2_1) <= ((x1_2 - x1_1) / 2)) and (abs(y1_1 - y2_1) <= ((y1_2 - y1_1) / 2)):
+        return True
+    return False

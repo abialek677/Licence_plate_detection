@@ -1,90 +1,95 @@
-import os
-from os.path import join
+from os import listdir, makedirs
+from os.path import join, exists
 import cv2
-import numpy as np
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
+from util import read_licence_plate, write_csv, find_overlapping_bboxes
 
-import util
-from sort.sort import Sort
-from util import get_car, read_license_plate, write_csv
-
-results = {}
-
-mot_tracker = Sort()
+# Constants
+FRAME_HEIGHT = 456
+FRAME_WIDTH = 608
+DETECTED_FOLDER = "detected_val"
 
 # Load models
-coco_model = YOLO('yolov8n.pt')
-license_plate_detector = YOLO('best.pt')
+licence_plate_detector = YOLO('best100.pt')
+licence_plate_recognition = YOLO('best_letters_312.pt')
 
-# Folder containing images (adjust here)
-image_folder = "C:/Users/adamb/Desktop/Data/UC3M-LP-yolo/LP/images/val"
+# Folder containing images
+image_folder = "C:/Users/Magda/Desktop/studia/sem4/sztuczna_inteligencja/UC3M-LP-yolo/LP/images/val/mycars"
 
-# List image files in the folder
-image_files = [f for f in os.listdir(image_folder) if os.path.isfile(join(image_folder, f))]
-image_file = "madzia.jpg"
-vehicles = [2, 3, 5, 7]
+# Create 'detected' subfolder if it doesn't exist
+if not exists(DETECTED_FOLDER):
+    makedirs(DETECTED_FOLDER)
 
-frame = cv2.imread(join(image_folder, image_file))
-frame_resized = cv2.resize(frame, (608, 456))  # Resize to 608x456
+# Process each image in the folder
+for image_file in listdir(image_folder):
+    if image_file.endswith(('.jpg', '.jpeg', '.png')):
+        # Read the image
+        frame = cv2.imread(join(image_folder, image_file))
+        original_h, original_w = frame.shape[:2]
+        frame_resized = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))  # Resize to 608x456
 
-results[0] = {}
+        # Detect licence plates
+        licence_plates = licence_plate_detector(frame_resized)[0]
 
-# Detect vehicles
-detections = coco_model(frame_resized)[0]
-detections_ = []
-for detection in detections.boxes.data.tolist():
-    x1, y1, x2, y2, score, class_id = detection
-    if int(class_id) in vehicles:
-        detections_.append([x1, y1, x2, y2, score])
+        for licence_plate in licence_plates.boxes.data.tolist():
+            licence_plate_text = ""
+            x1, y1, x2, y2, score, _ = licence_plate
+            # Crop licence plate
+            licence_plate_crop = frame_resized[int(y1):int(y2), int(x1): int(x2), :]
 
-print("Detections: ", detections_)
+            # Process licence plate
+            licence_plate_crop_gray = cv2.cvtColor(licence_plate_crop, cv2.COLOR_BGR2GRAY)
 
-if not detections_:
-    # If no cars are detected, assume the entire image is a single car
-    detections_ = [[0, 0, frame_resized.shape[1], frame_resized.shape[0], 1.0]]
+            # Read licence plate number
+            licence_plate_detections = licence_plate_recognition(licence_plate_crop)[0]
 
-# Check if there are detections before tracking
-if detections_:
-    # Track vehicles
-    track_ids = mot_tracker.update(np.asarray(detections_))
-    print(track_ids)
-    # Detect license plates
-    license_plates = license_plate_detector(frame_resized)[0]
-    print("Licence plates: ", license_plates.boxes.data.tolist())
+            # Convert detections to list of bounding boxes with scores
+            bboxes = licence_plate_detections.boxes.data.tolist()
 
-    for license_plate in license_plates.boxes.data.tolist():
-        x1, y1, x2, y2, score, class_id = license_plate
-        # Assign license plate to car
-        xcar1, ycar1, xcar2, ycar2, car_id = get_car(license_plate, track_ids)
-        print("Car id:", car_id)
-        if car_id != -1:
-            # Crop license plate
-            license_plate_crop = frame_resized[int(y1):int(y2), int(x1): int(x2), :]
+            overlapping_bboxes = find_overlapping_bboxes(bboxes)
+            # Group overlapping bounding boxes
+            grouped_bboxes = []
+            while overlapping_bboxes:
+                bbox1, bbox2 = overlapping_bboxes.pop(0)
+                group = [bbox1, bbox2]
+                i = 0
+                while i < len(overlapping_bboxes):
+                    bbox1, bbox2 = overlapping_bboxes[i]
+                    if any(bbox in group for bbox in (bbox1, bbox2)):
+                        group.extend([bbox1, bbox2])
+                        overlapping_bboxes.pop(i)
+                    else:
+                        i += 1
+                grouped_bboxes.append(group)
 
-            # Process license plate
-            license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
-            _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
+            # Choose the best bounding box from each group
+            chosen_detections = []
+            for group in grouped_bboxes:
+                best_bbox = max(group, key=lambda x: x[4])  # Choose bbox with highest score
+                chosen_detections.append(best_bbox)
 
-            # Read license plate number
-            license_plate_text, license_plate_text_score = read_license_plate(license_plate_crop_thresh)
-            print(license_plate_text)
-            if license_plate_text is not None:
-                results[0][car_id] = {'car': {'bbox': [xcar1, ycar1, xcar2, ycar2]},
-                                                  'license_plate': {'bbox': [x1, y1, x2, y2],
-                                                                    'text': license_plate_text,
-                                                                    'bbox_score': score,
-                                                                    'text_score': license_plate_text_score}}
-            # Draw rectangle around license plate
-            cv2.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            # Add non-overlapping bounding boxes to chosen detections
+            for bbox in bboxes:
+                if bbox not in sum(grouped_bboxes, []):  # Check if bbox is not in any group
+                    chosen_detections.append(bbox)
 
-# Convert BGR to RGB
-frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+            sorted_detections = sorted(chosen_detections, key=lambda x: x[0])
 
-# Show the image with rectangles drawn around license plates
-plt.imshow(frame_rgb)
-plt.axis('off')  # Turn off axis labels
-plt.show()
+            for detection in sorted_detections:
+                x1_d, y1_d, x2_d, y2_d, score_d, class_id = detection
+                licence_plate_text += licence_plate_recognition.names[class_id]
 
-# Write results
-write_csv(results, './test.csv')
+            # Draw rectangle around licence plate
+            cv2.rectangle(frame, (int(x1*original_w/FRAME_WIDTH), int(y1*original_h/FRAME_HEIGHT)),
+                          (int(x2*original_w/FRAME_WIDTH), int(y2*original_h/FRAME_HEIGHT)), (0, 255, 0), 2)
+
+            # Put a text above the licence plate
+            cv2.putText(frame, str(licence_plate_text),
+                        (int(x1 * original_w / FRAME_WIDTH), int(y1 * original_h / FRAME_HEIGHT) - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+        # Save the processed image with detected licence plates
+        cv2.imwrite(join(DETECTED_FOLDER, image_file), frame)
+
+print("Processing complete.")
