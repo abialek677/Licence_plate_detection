@@ -1,9 +1,13 @@
-from os import listdir, makedirs, path
+from os import listdir, makedirs, path, environ
 from os.path import join, exists
 import cv2
 from ultralytics import YOLO
 from util import find_overlapping_bboxes
 import Levenshtein as lev
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata'
 
 # Constants
 FRAME_HEIGHT = 456
@@ -89,10 +93,12 @@ for image_file in listdir(image_folder):
 
             if evaluateFlag:
                 filename, ext = path.splitext(image_file)
-                o_path = f"./evaluate/model_output/{filename}.txt"
+                o_path = f"evaluate/model_output_yolo/{filename}.txt"
                 with open(o_path, 'w') as f:
                     f.write(licence_plate_text)
-
+                o_path_tesseract = f"evaluate/tesseract_output/{filename}.txt"
+                with open(o_path_tesseract, 'w') as f:
+                    f.write(pytesseract.image_to_string(licence_plate_crop_gray, config='--oem 0 --psm 6'))
 
             x1_scaled = int(x1 * original_w / FRAME_WIDTH)
             y1_scaled = int(y1 * original_h / FRAME_HEIGHT)
@@ -116,24 +122,37 @@ for image_file in listdir(image_folder):
 print("Processing complete.")
 
 if evaluateFlag:
-    output_path = "./evaluate/model_output"
+    output_path = "evaluate/model_output_yolo"
     tagged_data_path = "./evaluate/test_eval"
+    tesseract_path = "./evaluate/tesseract_output"
 
     output_files = [path.join(output_path, file) for file in listdir(output_path)]
     tagged_data_files = [path.join(tagged_data_path, file) for file in listdir(tagged_data_path)]
+    tesseract_files = [path.join(tesseract_path, file) for file in listdir(tesseract_path)]
     model_evaluation = 0
-    for output_file, tagged_data_file in zip(output_files, tagged_data_files):
+    tesseract_evaluation = 0
+    for output_file, tagged_data_file, tesseract_file in zip(output_files, tagged_data_files, tesseract_files):
         # Load text from files
         with open(output_file, 'r') as f:
             output_text = f.read()
         with open(tagged_data_file, 'r') as f:
             tagged_data_text = f.read()
+        with open(tesseract_file, 'r') as f:
+            tesseract_text = f.read()
 
-        distance = lev.distance(output_text, tagged_data_text)
+        distance_model = lev.distance(output_text, tagged_data_text)
+        distance_tesseract = lev.distance(tesseract_text, tagged_data_text)
 
-        normalized_distance = max(distance / len(tagged_data_text), 0)
-        model_evaluation += normalized_distance
+        normalized_distance_model = max(distance_model / len(tagged_data_text), 0)
+        model_evaluation += normalized_distance_model
+
+        normalized_distance_tesseract = max(distance_tesseract / len(tagged_data_text), 0)
+        tesseract_evaluation += normalized_distance_tesseract
 
     model_evaluation /= len(output_files)
     model_evaluation = 1 - model_evaluation
+    tesseract_evaluation /= len(output_files)
+    tesseract_evaluation = 1 - tesseract_evaluation
+
     print(f"\n\nModel evaluation: {model_evaluation}")
+    print(f"Tesseract evaluation: {tesseract_evaluation}")
