@@ -1,5 +1,9 @@
-opencv-python
+opencv-python~=4.9.0.80
 shapely
-ultralytics
-Levenshtein
-pytesseract
+ultralytics~=8.2.18
+Levenshtein~=0.25.1
+pytesseract~=0.3.10
+pillow~=10.3.0
+matplotlib~=3.9.0
+numpy~=1.26.4
+tqdm~=4.66.4

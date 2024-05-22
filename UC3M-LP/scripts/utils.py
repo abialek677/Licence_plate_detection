@@ -1,6 +1,4 @@
 import os
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
 
 
 def poly2bbox(poly_coord):
@@ -29,13 +27,23 @@ def create_txt_file(input_directory):
         for filename in val_files:
             f.write(filename.split('.')[0] + '\n')
 
-def is_point_inside_polygon(points, poly):
-    poly = Polygon(poly)
+def find_overlapping_bboxes(bboxes):
+    """Funkcja znajdująca zestawy bounding boxów, których obszary pokrywają się w minimum 80%."""
+    overlapping_bboxes = []
 
-    # get the centroid of the rectangle points
-    x_coords = [point[0] for point in points]
-    y_coords = [point[1] for point in points]
-    centroid = (sum(x_coords) / len(points), sum(y_coords) / len(points))
-    inside = poly.contains(Point(centroid))
-    
-    return inside
+    for i, bbox1 in enumerate(bboxes):
+        for j, bbox2 in enumerate(bboxes[i+1:], start=i+1):
+            cover = isCovered(bbox1, bbox2)
+            if cover:
+                overlapping_bboxes.append((bbox1, bbox2))
+
+    return overlapping_bboxes
+
+
+def isCovered(bbox1, bbox2):
+    x1_1, y1_1, x1_2, y1_2, _, _ = bbox1
+    x2_1, y2_1, x2_2, y2_2, _, _ = bbox2
+
+    if (abs(x1_1 - x2_1) <= ((x1_2 - x1_1) / 2)) and (abs(y1_1 - y2_1) <= ((y1_2 - y1_1) / 2)):
+        return True
+    return False

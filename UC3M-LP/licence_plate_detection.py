@@ -2,7 +2,7 @@ from os import listdir, makedirs, path, environ
 from os.path import join, exists
 import cv2
 from ultralytics import YOLO
-from util import find_overlapping_bboxes
+from scripts.utils import find_overlapping_bboxes
 import Levenshtein as lev
 import pytesseract
 
@@ -15,8 +15,8 @@ FRAME_WIDTH = 608
 DETECTED_FOLDER = "detected_val"
 
 # Load models
-licence_plate_detector = YOLO('best100.pt')
-licence_plate_recognition = YOLO('best_letters_312.pt')
+licence_plate_detector = YOLO('models/licence_best_750.pt')
+licence_plate_recognition = YOLO('models/letters_best_312.pt')
 
 # checking the work of the ocr model
 evaluateFlag = True
@@ -24,9 +24,9 @@ evaluateFlag = True
 
 # Folder containing images
 if evaluateFlag:
-    image_folder = "./evaluate/cars_test"
+    image_folder = "evaluate/cars_test"
 else:
-    image_folder = "./cars"
+    image_folder = "cars"
 
 # Create 'detected' subfolder if it doesn't exist
 if not exists(DETECTED_FOLDER):
@@ -123,8 +123,8 @@ print("Processing complete.")
 
 if evaluateFlag:
     output_path = "evaluate/model_output_yolo"
-    tagged_data_path = "./evaluate/test_eval"
-    tesseract_path = "./evaluate/tesseract_output"
+    tagged_data_path = "evaluate/test_eval"
+    tesseract_path = "evaluate/tesseract_output"
 
     output_files = [path.join(output_path, file) for file in listdir(output_path)]
     tagged_data_files = [path.join(tagged_data_path, file) for file in listdir(tagged_data_path)]
