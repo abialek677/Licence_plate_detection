@@ -15,7 +15,7 @@ FRAME_WIDTH = 608
 DETECTED_FOLDER = "detected_val"
 
 # Load models
-licence_plate_detector = YOLO('models/licence_best_750.pt')
+licence_plate_detector = YOLO('models/licence_100.pt')
 licence_plate_recognition = YOLO('models/letters_best_312.pt')
 
 # checking the work of the ocr model
