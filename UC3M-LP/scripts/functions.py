@@ -30,9 +30,9 @@ def yolo_tesseract_compairson():
         if image_file.endswith(('.jpg', '.jpeg', '.png')):
             # Read the image
             frame = cv2.imread(join(image_folder, image_file))
+            print(image_file)
             original_h, original_w = frame.shape[:2]
             frame_resized = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))  # Resize to 608x456
-
             # Detect licence plates
             licence_plates = licence_plate_detector(frame_resized)[0]
 
@@ -90,6 +90,7 @@ def yolo_tesseract_compairson():
                     f.write(licence_plate_text)
                 o_path_tesseract = f"evaluate/tesseract_output/{filename}.txt"
                 with open(o_path_tesseract, 'w') as f:
+                    s = pytesseract.image_to_string(licence_plate_crop_gray, config='--oem 0 --psm 6')
                     f.write(pytesseract.image_to_string(licence_plate_crop_gray, config='--oem 0 --psm 6'))
 
                 x1_scaled = int(x1 * original_w / FRAME_WIDTH)
